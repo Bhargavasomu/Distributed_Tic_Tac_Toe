@@ -1,4 +1,6 @@
 rm -rf *.class
-javac RemoteInterface.java
-javac ServerMain.java
+javac ServerInterface.java
+javac ModeratorInterface.java
+javac Server.java
+javac Moderator.java
 javac ClientMain.java

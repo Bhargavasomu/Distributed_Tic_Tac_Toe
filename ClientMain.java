@@ -46,6 +46,7 @@ public class ClientMain
 	public static void main(String[] args)
 	{
 		int playerNum;
+		String moderatorName;
 		Scanner sc = new Scanner(System.in);
 		String userResponse;
 		try
@@ -53,11 +54,17 @@ public class ClientMain
 			// Getting the Registry
 			Registry registry = LocateRegistry.getRegistry(null);
 			
-			// Looking up the registry for the remote object
-			RemoteInterface stub = (RemoteInterface) registry.lookup("RemoteInterface");
+			// Connecting to Server via RMI
+			ServerInterface stubServer = (ServerInterface) registry.lookup("ServerInterface");
 			
 			while (true)
 			{	
+				// Get the free moderator, if no free moderator then server creates new moderator and returns the name
+				moderatorName = stubServer.getFreeModerator(); 
+				
+				// Looking up the registry for the remote object
+				ModeratorInterface stub = (ModeratorInterface) registry.lookup(moderatorName);
+				
 				// Trying to connect to the server
 				String connectionResponseMsg = stub.connect();
 				if (connectionResponseMsg.equals("Busy"))
@@ -129,6 +136,10 @@ public class ClientMain
 						System.out.println("Draw");
 					else
 						System.out.println("You Lost");
+					
+					// Kill the moderator (Both the players should not kill the moderator, only player1 should kill)
+					stubServer.killModerator(moderatorName);
+					
 				}
 				else
 				{

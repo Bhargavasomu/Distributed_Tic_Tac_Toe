@@ -1,223 +1,110 @@
+import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.util.Random;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.Hashtable;
+import java.util.Set;
 
-public class Server implements RemoteInterface
+public class Server implements ServerInterface
 {
-	// All the functions listed here are the functions belonging to the server
+	// Basically stores the relation between Moderator Name and the Moderator Object
+	static Hashtable <String, ModeratorInterface> moderatorsList = new Hashtable <String, ModeratorInterface>();
 	
-	int numClientsConnected;
-	int prevAllocatedPlayerNum;
-	// Stores 1 or 2, meaning that it is playerx (x=1 or x=2) chance to play
-	int playerTurn;
-	// winner = 1, means that player1 won the game
-	int winner;
-	Random rand;
-	// cellOccupied[i] = 1 means that (i+1) cell is occupied by player1 (values can be only 1 or 2 or 3 -> 3 means draw)
-	int[] cellOccupied = new int[9];
-	
-	public Server()
-	{
-		this.numClientsConnected = 0;
-		this.prevAllocatedPlayerNum = -1;
-		this.rand = new Random();
-		this.playerTurn = 1;
-		this.winner = 0;
-		for (int i=0; i<cellOccupied.length; i++)
-			this.cellOccupied[i] = 0;
-	}
+	static int moderatorsNum = 0;
 	
 	@Override
-	public int getNumberPlayers()
+	public String getFreeModerator() throws RemoteException
 	{
-		return numClientsConnected;
+		// This function returns the free moderator name, so that the client can connect to that game
+		// If no moderator is free, then should create another moderator and return that name
+		Set<String> moderators = moderatorsList.keySet();
+        for(String moderatorName : moderators)
+        {
+        	ModeratorInterface m = moderatorsList.get(moderatorName);
+        	if (m.getNumberPlayers() < 2)
+        	{
+        		return moderatorName;
+        	}
+        }
+        
+        // If reached here, means that there is no free moderator. Hence create a moderator and return that name
+        moderatorsNum += 1;
+        String newModeratorName = "moderator" + Integer.toString(moderatorsNum);
+        createModerator(newModeratorName);
+        return newModeratorName;
 	}
 	
-	@Override
-	public int getPlayerTurnNumber()
+	// Creating a moderator
+	public static void createModerator(String moderatorName)
 	{
-		return playerTurn;
-	}
-	
-	@Override
-	public int[] getOccupiedCells()
-	{
-		return cellOccupied;
-	}
-	
-	@Override
-	public int getWinner()
-	{
-		return winner;
-	}
-
-	@Override
-	public String connect() throws RemoteException 
-	{
-		if (numClientsConnected < 2)
+		try
 		{
-			numClientsConnected += 1;
-			return "Welcome";
+			// Instantiating the Moderator
+	        Moderator moderator = new Moderator();
+	        
+	        // Exporting the object of implementation class
+	        // Here we are exporting the moderator object to the stub 
+	        ModeratorInterface stub = (ModeratorInterface) UnicastRemoteObject.exportObject(moderator, 0);
+	        
+	        // Locating the Registry
+	        Registry registry = LocateRegistry.getRegistry();
+	        
+	        // Binding the moderator object to the registry
+	        registry.bind(moderatorName, stub);
+	        
+	        // Adding the Moderator to the list of moderators
+	        moderatorsList.put(moderatorName, stub);
 		}
-		else
-			return "Busy";
-	}
-	
-	@Override
-	public int assignPlayerNumber()
-	{
-		int playerNum;
-		if (prevAllocatedPlayerNum == -1)
+		catch (Exception e)
 		{
-			// Number to the first joined player
-			playerNum = rand.nextInt(2) + 1;
-			prevAllocatedPlayerNum = playerNum;
-		}
-		else
-		{
-			// Number to the second joined player
-			if (prevAllocatedPlayerNum == 1)
-				playerNum = 2;
-			else
-				playerNum = 1;
+			System.err.println("Server Exception: " + e.toString());
+			e.printStackTrace();
 		}
 		
-		return playerNum;
 	}
 	
 	@Override
-	public int checkRows()
+	// Killing a moderator
+	public void killModerator(String moderatorName)
 	{
-		boolean rowWon = false;
-		int playerWon = 0;
-		for (int i=1; i<8; i+=3)
-		{
-			rowWon = true;
-			playerWon = cellOccupied[i-1];
-			if (playerWon == 0)
-			{
-				rowWon = false;
-				continue;
-			}
-			for (int j=(i+1); j<(i+3); j++)
-			{
-				if (cellOccupied[j-1] != playerWon)
-				{
-					rowWon = false;
-					break;
-				}
-			}
-			if (rowWon == true)
-				return playerWon;
+        try
+        {
+        	// Locating the Registry
+			Registry registry = LocateRegistry.getRegistry();
+			
+			// Unbinding the moderator from the registry
+			registry.unbind(moderatorName);
+			
+			// Remove the name from the moderators list
+			moderatorsList.remove(moderatorName);
 		}
-		
-		// No wins in row wise
-		return 0;
+        catch (RemoteException e) 
+        {
+        	System.err.println("Registry not found");
+		}
+        catch (NotBoundException e)
+        {
+        	System.err.println("Moderator with that name not present");
+		}
 	}
 	
-	@Override
-	public int checkCols()
+	// This class implements the actual main method of the Server
+	public static void main(String args[]) throws RemoteException, AlreadyBoundException
 	{
-		boolean colWon = false;
-		int playerWon = 0;
-		for (int i=1; i<4; i++)
-		{
-			colWon = true;
-			playerWon = cellOccupied[i-1];
-			if (playerWon == 0)
-			{
-				colWon = false;
-				continue;
-			}
-			for (int j=(i+3); j<=(i+6); j+=3)
-			{
-				if (cellOccupied[j-1] != playerWon)
-				{
-					colWon = false;
-					break;
-				}
-			}
-			if (colWon == true)
-				return playerWon;
-		}
+		System.err.println("Server ready");
 		
-		// No wins in col wise
-		return 0;
+		// Instantiating the Server
+        Server server = new Server();
+        
+        // Exporting the server object to the stub 
+        ServerInterface stubServer = (ServerInterface) UnicastRemoteObject.exportObject(server, 0);
+        
+        // Locating the Registry
+        Registry registry = LocateRegistry.getRegistry();
+        
+        // Binding the moderator object to the registry
+        registry.bind("ServerInterface", stubServer);
 	}
-	
-	@Override
-	public int checkDiagnols()
-	{	
-		// Check the first diagnol (1,5,9)
-		if ((cellOccupied[0] == cellOccupied[4]) && (cellOccupied[4] == cellOccupied[8]) && (cellOccupied[0] != 0))
-			return cellOccupied[0];
-		
-		// Check the second diagnol (3,5,7)
-		if ((cellOccupied[2] == cellOccupied[4]) && (cellOccupied[4] == cellOccupied[6]) && (cellOccupied[2] != 0))
-			return cellOccupied[0];
-		
-		// No wins in diagnol wise
-		return 0;
-	}
-	
-	@Override
-	public void checkWinner()
-	{
-		int winnerNum;
-		winnerNum = checkRows();
-		if (winnerNum != 0)
-		{
-			this.winner = winnerNum;
-			return;
-		}
-		
-		winnerNum = checkCols();
-		if (winnerNum != 0)
-		{
-			this.winner = winnerNum;
-			return;
-		}
-		
-		winnerNum = checkDiagnols();
-		if (winnerNum != 0)
-		{
-			this.winner = winnerNum;
-			return;
-		}
-		
-		// If reached here means that, there might be a possibility of draw
-		boolean draw = true; 
-		for (int i=1; i<=9; i++)
-		{
-			if (cellOccupied[i - 1] == 0)
-			{
-				draw = false;
-				break;
-			}
-		}
-		if (draw == true)
-			this.winner = 3;
-		
-		return;
-	}
-	
-	@Override
-	public String makeMove(int playerNum, int cellNumber) throws RemoteException 
-	{
-		// First check if this cellNumber was already occupied in the past
-		if (cellOccupied[cellNumber - 1] != 0)
-			return "Invalid Step";
-		
-		// If all clear, then insert the cellNumber
-		cellOccupied[cellNumber - 1] = playerNum;
-		// Give the chance to the other player
-		if (playerTurn == 1)
-			playerTurn = 2;
-		else
-			playerTurn = 1;
-		
-		checkWinner();
-		
-		return "Valid Step";
-	}
-	
 }
