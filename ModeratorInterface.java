@@ -10,6 +10,7 @@ public interface ModeratorInterface extends Remote
 	String makeMove(int playerNum, int cellNumber) throws RemoteException;
 	int[] getOccupiedCells() throws RemoteException;
 	int getWinner() throws RemoteException;
+	void setWinner(int playerNum) throws RemoteException;
 	void checkWinner() throws RemoteException;
 	int checkRows() throws RemoteException;
 	int checkCols() throws RemoteException;

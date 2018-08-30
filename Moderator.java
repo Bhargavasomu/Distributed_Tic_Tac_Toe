@@ -50,6 +50,12 @@ public class Moderator implements ModeratorInterface
 	{
 		return winner;
 	}
+	
+	@Override
+	public void setWinner(int playerNum)
+	{
+		winner = playerNum;
+	}
 
 	@Override
 	public String connect() throws RemoteException 
