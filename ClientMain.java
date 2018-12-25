@@ -158,7 +158,7 @@ public class ClientMain
 							if (timeout == true)
 							{
 								System.out.println();
-								System.out.println("Time Up Fucker");
+								System.out.println("Time Up !!!");
 								break;
 							}
 							
@@ -249,7 +249,7 @@ public class ClientMain
 							if (timeout == true)
 							{
 								System.out.println();
-								System.out.println("Time Up Fucker");
+								System.out.println("Time Up !!!");
 								break;
 							}
 							

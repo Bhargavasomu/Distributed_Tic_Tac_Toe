@@ -160,7 +160,7 @@ public class Moderator implements ModeratorInterface
 		
 		// Check the second diagnol (3,5,7)
 		if ((cellOccupied[2] == cellOccupied[4]) && (cellOccupied[4] == cellOccupied[6]) && (cellOccupied[2] != 0))
-			return cellOccupied[0];
+			return cellOccupied[2];
 		
 		// No wins in diagnol wise
 		return 0;
@@ -210,6 +210,10 @@ public class Moderator implements ModeratorInterface
 	@Override
 	public String makeMove(int playerNum, int cellNumber) throws RemoteException 
 	{
+		// Cellnumber should be in the range of 0 to 9
+		if ((cellNumber < 1) || (cellNumber > 9))
+			return "Invalid Step";
+		
 		// First check if this cellNumber was already occupied in the past
 		if (cellOccupied[cellNumber - 1] != 0)
 			return "Invalid Step";
